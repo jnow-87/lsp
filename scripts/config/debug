@@ -1,0 +1,9 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# dtsls configuration
+#
+CONFIG_CONFIG_FILE=".dtsls"
+# CONFIG_BUILD_RELEASE is not set
+CONFIG_BUILD_DEBUG=y
+CONFIG_BUILD_TREE=build/$(CONFIG_BUILD_TYPE)
+CONFIG_BUILD_TYPE=debug

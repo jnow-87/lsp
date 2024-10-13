@@ -1,0 +1,47 @@
+/**
+ * Copyright (C) 2024 Jan Nowotsch
+ * Author Jan Nowotsch	<jan.nowotsch@gmail.com>
+ *
+ * Released under the terms of the GNU GPL v2.0
+ */
+
+
+
+/* output declarations */
+%struct-type
+%omit-struct-type
+%readonly-tables
+%global-table
+%includes
+%language=C
+
+/* delimiter */
+%delimiters=","
+
+/* naming */
+%define slot-name method
+%define hash-function-name lsp_cmds_hash
+%define lookup-function-name lsp_cmds_lookup
+%define word-array-name lsp_cmds_wordlist
+%define constants-prefix LSP_CMDS_
+
+
+/* c-code */
+%{
+	#include <lsp.h>
+%}
+
+/* struct-type definition */
+struct lsp_cmd_t;
+
+%%
+# method						handler
+initialize,						lsp_initialize
+shutdown,						lsp_shutdown
+exit,							lsp_exit
+textDocument/didOpen,			lsp_doc_open
+textDocument/didChange,			lsp_doc_changed
+textDocument/completion,		lsp_completion
+textDocument/definition,		lsp_definition
+textDocument/documentSymbol,	lsp_symbols
+%%
