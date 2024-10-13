@@ -1,0 +1,48 @@
+/**
+ * Copyright (C) 2024 Jan Nowotsch
+ * Author Jan Nowotsch	<jan.nowotsch@gmail.com>
+ *
+ * Released under the terms of the GNU GPL v2.0
+ */
+
+
+
+/* output declarations */
+%struct-type
+%omit-struct-type
+%readonly-tables
+%global-table
+%includes
+%language=C
+
+/* delimiter */
+%delimiters=","
+
+/* naming */
+%define slot-name cmd
+%define hash-function-name wiggler_cmds_hash
+%define lookup-function-name wiggler_cmds_lookup
+%define word-array-name wiggler_wordlist
+%define constants-prefix WIGGLER_
+
+
+/* c-code */
+%{
+	#include <wiggler/cmds.h>
+%}
+
+/* struct-type definition */
+struct wiggler_cmd_t;
+
+%%
+# cmd		handler				nargs	arguments					description
+help,		cmd_help,			0,		"",							"print the help message"
+init,		cmd_initialize,		0,		"",							"initialise lsp connection"
+shutdown,	cmd_shutdown,		0,		"",							"signal shutdown to lsp server"
+exit,		cmd_exit,			0,		"",							"exit"
+open,		cmd_doc_open,		1,		"<file>",					"signal document open"
+change,		cmd_doc_changed,	1,		"<file>",					"signal document change"
+compl,		cmd_completion,		3,		"<file> <line> <column>",	"request text completion"
+def,		cmd_definition,		3,		"<file> <line> <column>",	"request symbol defintion"
+sym,		cmd_symbols,		1,		"<file>",					"request symbol list"
+%%

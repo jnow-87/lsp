@@ -26,7 +26,7 @@ tool_deps :=
 
 # init source and build tree
 default_build_tree := build/
-src_dirs := dtsls/
+src_dirs := dtsls/ wiggler/
 
 # include build system Makefile
 include $(scripts_dir)/main.make
