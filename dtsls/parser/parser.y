@@ -102,12 +102,14 @@ int dtsls_parser_error(char const *fmt, ...){
 	va_list lst;
 
 
-	dprintf(log_filed(), "%s:%d:%d token \"%s\" -- ",
-		dt_script->path,
-		dtslslloc.first_line,
-		dtslslloc.first_column,
-		dtslstext
-	);
+	if(dt_script != NULL){
+		dprintf(log_filed(), "%s:%d:%d token \"%s\" -- ",
+			dt_script->path,
+			dtslslloc.first_line,
+			dtslslloc.first_column,
+			dtslstext
+		);
+	}
 
 	va_start(lst, fmt);
 	vdprintf(log_filed(), fmt, lst);
@@ -128,4 +130,5 @@ static int dtslserror(file_t *file, char const *s){
 
 static void cleanup(void){
 	dtslslex_destroy();
+	dt_script = NULL;
 }
