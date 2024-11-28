@@ -40,8 +40,8 @@ static void sym_free(symbol_t *sym);
 
 
 /* global functions */
-int symtab_update(char const *file_name, size_t name_len, char const *text, size_t text_len){
-	if(symtab_file_stage(file_name, name_len, NULL, text, text_len, false) != 0)
+int symtab_update(char const *file_name, char const *text){
+	if(symtab_file_stage(file_name, NULL, text, false) != 0)
 		return -1;
 
 	while(staged_files){
@@ -66,7 +66,9 @@ list_t const *symtab_files(){
 	return files;
 }
 
-int symtab_file_stage(char const *name, size_t name_len, file_t *parent, char const *text, size_t text_len, bool resolve_relative){
+int symtab_file_stage(char const *name, file_t *parent, char const *text, bool resolve_relative){
+	size_t name_len = strlen(name),
+		   text_len = (text != NULL) ? strlen(text) : 0;
 	char const *uri;
 	file_t *file;
 
@@ -112,7 +114,7 @@ list_t const *symtab_symbols(){
 	return symbols;
 }
 
-int symtab_symbol_add(file_t *file, size_t line, size_t column, char const *name, size_t name_len, char const *signature, size_t signature_len){
+int symtab_symbol_add(file_t *file, size_t line, size_t column, char const *name, char const *signature){
 	symbol_t *sym;
 
 
@@ -121,8 +123,8 @@ int symtab_symbol_add(file_t *file, size_t line, size_t column, char const *name
 	if(sym == 0x0)
 		goto err_0;
 
-	sym->name = stralloc(name, name_len);
-	sym->signature = stralloc(signature, signature_len);
+	sym->name = stralloc(name, strlen(name));
+	sym->signature = stralloc(signature, strlen(signature));
 
 	if(sym->name == NULL || sym->signature == NULL)
 		goto err_1;

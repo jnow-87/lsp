@@ -39,7 +39,7 @@ void lsp_init(){
 
 /* local functions */
 static void *doc_update(char const *path, char const *text){
-	symtab_update(path, strlen(path), text, strlen(text));
+	symtab_update(path, text);
 
 	return NULL;
 }

@@ -43,8 +43,13 @@
 	#include <dtsls/symtab.h>
 
 
+	/* macros */
+	#define DTSLS_STRMAX	256
+
+
 	/* prototypes */
 	int dtsls_parser_error(char const *fmt, ...);
+	int dtsls_parser_strcpy(char *dst, char const *src, size_t n, int token);
 }
 
 /* parse paramters */
@@ -61,19 +66,16 @@
 
 /* parser union type */
 %union{
-	struct{
-		char *s;
-		size_t len;
-	} str;
+	char s[DTSLS_STRMAX];
 }
 
 /* terminals */
 %token T_INCLUDE
 %token T_DEFINE
 %token T_VALUE
-%token <str> T_HEADER
-%token <str> T_IDFR
-%token <str> T_SIGNATURE
+%token <s> T_HEADER
+%token <s> T_IDFR
+%token <s> T_SIGNATURE
 
 
 %%
@@ -85,12 +87,12 @@ start : error											{ cleanup(); YYABORT; }
 	  ;
 
 symbol-lst : %empty										{ }
-		   | symbol-lst T_INCLUDE '<' T_HEADER '>'		{ symtab_file_stage($4.s, $4.len, file, NULL, 0, false); }
-		   | symbol-lst T_INCLUDE '"' T_HEADER '"'		{ symtab_file_stage($4.s, $4.len, file, NULL, 0, true); }
+		   | symbol-lst T_INCLUDE '<' T_HEADER '>'		{ symtab_file_stage($4, file, NULL, false); }
+		   | symbol-lst T_INCLUDE '"' T_HEADER '"'		{ symtab_file_stage($4, file, NULL, true); }
 		   | symbol-lst T_DEFINE T_IDFR					{ /* ignore */ }
 		   | symbol-lst T_DEFINE T_IDFR T_VALUE			{ /* ignore */ }
 		   | symbol-lst T_DEFINE T_IDFR	T_IDFR			{ /* ignore */ }
-		   | symbol-lst T_DEFINE T_IDFR T_SIGNATURE		{ symtab_symbol_add(file, dtslslloc.first_line, dtslslloc.first_column - $3.len, $3.s, $3.len, $4.s, $4.len); }
+		   | symbol-lst T_DEFINE T_IDFR T_SIGNATURE		{ symtab_symbol_add(file, dtslslloc.first_line, dtslslloc.first_column - strlen($3), $3, $4); }
 		   ;
 
 
@@ -118,6 +120,22 @@ int dtsls_parser_error(char const *fmt, ...){
 	dprintf(log_filed(), ": %s\n", (errno ? strerror(errno) : ""));
 
 	return -1;
+}
+
+int dtsls_parser_strcpy(char *dst, char const *src, size_t n, int token){
+	if(n >= DTSLS_STRMAX){
+		dtsls_parser_error("string too long, max=%u", DTSLS_STRMAX);
+
+		// trigger a parser error
+		// this is not the nicest way to trigger an error since it will cause a syntax
+		// error even though it is not a syntax error and therefor confuse the user
+		return YYSYMBOL_YYEOF;
+	}
+
+	strncpy(dst, src, n);
+	dst[n] = 0;
+
+	return token;
 }
 
 

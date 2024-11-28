@@ -46,14 +46,14 @@
 	/* keywords */
 #[ \t]*include[ \t]*			{ BEGIN INCLUDE; return T_INCLUDE; }
 <INCLUDE>[<>\"]					{ return dtslstext[0]; }
-<INCLUDE>[a-zA-Z0-9\/\._-]+		{ dtslslval.str.s = dtslstext; dtslslval.str.len = dtslsleng; return T_HEADER; }
+<INCLUDE>[a-zA-Z0-9\/\._-]+		{ return dtsls_parser_strcpy(dtslslval.s, dtslstext, dtslsleng, T_HEADER); }
 <INCLUDE>\n						{ INC_LINE; BEGIN INITIAL; }
 
 #[ \t]*define					{ BEGIN DEFINE; return T_DEFINE; }
 <DEFINE>[ \t]					{ }
-<DEFINE>[a-zA-Z0-9_]+			{ dtslslval.str.s = dtslstext; dtslslval.str.len = dtslsleng; return T_IDFR; }
-<DEFINE>[a-zA-Z0-9_\[\]\.]+		{ dtslslval.str.s = dtslstext; dtslslval.str.len = dtslsleng; return T_VALUE; }
-<DEFINE>\([a-zA-Z0-9_,\. ]*\)	{ dtslslval.str.s = dtslstext; dtslslval.str.len = dtslsleng; return T_SIGNATURE; }
+<DEFINE>[a-zA-Z0-9_]+			{ return dtsls_parser_strcpy(dtslslval.s, dtslstext, dtslsleng, T_IDFR); }
+<DEFINE>[a-zA-Z0-9_\[\]\.]+		{ return dtsls_parser_strcpy(dtslslval.s, dtslstext, dtslsleng, T_VALUE); }
+<DEFINE>\([a-zA-Z0-9_,\. ]*\)	{ return dtsls_parser_strcpy(dtslslval.s, dtslstext, dtslsleng, T_SIGNATURE); }
 <DEFINE>\\\r?\n.*				{ INC_LINE; /* skip over line concatenations using '\\' */}
 <DEFINE>\r?\n					{ INC_LINE; BEGIN INITIAL; }
 <DEFINE>.						{ return dtslstext[0]; }
