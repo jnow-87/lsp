@@ -49,7 +49,7 @@ int config_init(){
 
 	/* parse config file */
 	// read file
-	text = file_read(CONFIG_CONFIG_FILE, NULL);
+	text = file_read(CONFIG_CONFIG_FILE);
 
 	if(text == NULL){
 		// having no config file is fine

@@ -1,0 +1,51 @@
+/**
+ * Copyright (C) 2019 Jan Nowotsch
+ * Author Jan Nowotsch	<jan.nowotsch@gmail.com>
+ *
+ * Released under the terms of the GNU GPL v2.0
+ */
+
+
+
+#ifndef VECTOR_H
+#define VECTOR_H
+
+
+#include <sys/types.h>
+
+
+/* macros */
+#define VECTOR_INITIALISER(_dt_size) (vector_t){ \
+	.buf = 0x0, \
+	.dt_size = (_dt_size), \
+	.capacity = 0, \
+	.size = 0, \
+}
+
+#define vector_for_each(v, p) \
+	for(p=(v)->buf; p<(typeof(p))((v)->buf+(v)->dt_size*(v)->size); p++)
+
+
+/* types */
+typedef struct{
+	void *buf;
+
+	size_t dt_size;
+
+	size_t capacity,
+		   size;
+} vector_t;
+
+
+/* prototypes */
+int vector_init(vector_t *v, size_t dt_size, size_t capa);
+void vector_destroy(vector_t *v);
+
+int vector_add(vector_t *v, void *buf);
+void vector_rm(vector_t *v, size_t idx);
+
+void *vector_get(vector_t *v, size_t idx);
+void *vector_last(vector_t *v);
+
+
+#endif // VECTOR_H

@@ -11,7 +11,11 @@
 #include <utils/list.h>
 
 
-/* global functoins */
+/* local/static prototypes */
+static void list_rm_el(list_t **head, list_t *el);
+
+
+/* global functions */
 int list_add(list_t **head, void *payload){
 	list_t *el;
 
@@ -39,19 +43,12 @@ int list_add(list_t **head, void *payload){
 	return 0;
 }
 
-void list_rm(list_t **head, list_t *el){
-	if(el == NULL)
-		return;
+void list_rm(list_t **head, void *payload){
+	list_t *el = list_find(*head, payload);
 
-	if(el != *head)
-		el->prev->next = el->next;
 
-	if(el->next != NULL)	el->next->prev = el->prev;
-	else					(*head)->prev = el->prev;
-
-	if(el == *head)			*head = el->next;
-
-	free(el);
+	if(el != NULL)
+		list_rm_el(head, el);
 }
 
 list_t *list_find(list_t *head, void *payload){
@@ -65,5 +62,19 @@ list_t *list_find(list_t *head, void *payload){
 
 void list_free(list_t **head){
 	while(*head != NULL)
-		list_rm(head, *head);
+		list_rm_el(head, *head);
+}
+
+
+/* local functions */
+static void list_rm_el(list_t **head, list_t *el){
+	if(el != *head)
+		el->prev->next = el->next;
+
+	if(el->next != NULL)	el->next->prev = el->prev;
+	else					(*head)->prev = el->prev;
+
+	if(el == *head)			*head = el->next;
+
+	free(el);
 }

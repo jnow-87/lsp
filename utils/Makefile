@@ -11,4 +11,5 @@ obj-y := \
 	list.o \
 	log.o \
 	file.o \
-	string.o
+	string.o \
+	vector.o

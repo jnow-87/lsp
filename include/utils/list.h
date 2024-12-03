@@ -31,7 +31,7 @@ typedef struct list_t{
 
 /* prototypes */
 int list_add(list_t **head, void *payload);
-void list_rm(list_t **head, list_t *el);
+void list_rm(list_t **head, void *payload);
 list_t *list_find(list_t *head, void *payload);
 
 void list_free(list_t **head);

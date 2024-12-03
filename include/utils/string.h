@@ -15,7 +15,7 @@
 
 
 /* prototypes */
-char *stralloc(char const *s, size_t n);
+char *stralloc(char const *s);
 int strmatch(char const *s, FILE *fp);
 
 

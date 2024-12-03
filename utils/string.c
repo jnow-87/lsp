@@ -13,7 +13,8 @@
 
 
 /* global functions */
-char *stralloc(char const *s, size_t n){
+char *stralloc(char const *s){
+	size_t n = strlen(s);
 	char *x;
 
 

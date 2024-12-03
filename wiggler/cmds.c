@@ -214,7 +214,7 @@ int file_params(char const *path, char **uri, char **text, char **stem){
 	if(text == NULL)
 		return 0;
 
-	*text = file_read(path, NULL);
+	*text = file_read(path);
 
 	if(*text == NULL)
 		goto_err(err_1, "reading file \"%s\"", path);

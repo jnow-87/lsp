@@ -20,7 +20,7 @@ static int iskeyword(char c);
 
 
 /* global functions */
-char *file_read(char const *path, size_t *size){
+char *file_read(char const *path){
 	char *text;
 	FILE *fp;
 	struct stat st;
@@ -37,9 +37,6 @@ char *file_read(char const *path, size_t *size){
 	text = malloc(st.st_size + 1);
 
 	if(text != NULL){
-		if(size != NULL)
-			*size = st.st_size;
-
 		fread(text, st.st_size, 1, fp);
 		text[st.st_size] = 0;
 	}

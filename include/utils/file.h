@@ -15,7 +15,7 @@
 
 
 /* prototypes */
-char *file_read(char const *path, size_t *size);
+char *file_read(char const *path);
 int file_locate_identifier(char const *text, size_t line, size_t column, char *idfr, size_t idfr_max, bool trunc);
 char const *file_stem(char const *path);
 

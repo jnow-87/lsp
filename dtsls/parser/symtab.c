@@ -21,22 +21,28 @@
 #include <utils/list.h>
 #include <utils/log.h>
 #include <utils/string.h>
+#include <utils/vector.h>
 
 
 /* static variables */
 static list_t *files = NULL,
-			  *symbols = NULL;
+			  *types = NULL,
+			  *nodes = NULL;
 
 static list_t *staged_files = NULL;
 
 
 /* local/static prototypes */
-static file_t *file_realloc(file_t *file, char const *uri, size_t uri_len, char const *text, size_t text_len, file_t *parent);
+static file_t *file_realloc(file_t *file, char const *uri, char const *text, file_t *parent);
 static void file_reset(file_t *file);
 static void file_free(file_t *file);
 static char const *file_resolve(char const *name, size_t name_len, file_t *parent);
 
-static void sym_free(symbol_t *sym);
+static void type_free(type_t *type);
+static void type_attr_free(type_attr_t *attr);
+static void node_free(node_t *node);
+
+static char const *fmt_signature(vector_t *attrs, bool exclude_defaults);
 
 
 /* global functions */
@@ -47,8 +53,8 @@ int symtab_update(char const *file_name, char const *text){
 	while(staged_files){
 		VERBOSE("parse file %s", ((file_t*)staged_files->payload)->path);
 
-		dtslsparse(staged_files->payload);
-		list_rm(&staged_files, staged_files);
+		devtreeparse(staged_files->payload);
+		list_rm(&staged_files, staged_files->payload);
 	}
 
 	return 0;
@@ -62,13 +68,16 @@ void symtab_free(){
 		file_free(file);
 }
 
-list_t const *symtab_files(){
-	return files;
+list_t *symtab_types(void){
+	return types;
+}
+
+list_t *symtab_nodes(void){
+	return nodes;
 }
 
 int symtab_file_stage(char const *name, file_t *parent, char const *text, bool resolve_relative){
-	size_t name_len = strlen(name),
-		   text_len = (text != NULL) ? strlen(text) : 0;
+	size_t name_len = strlen(name);
 	char const *uri;
 	file_t *file;
 
@@ -80,15 +89,15 @@ int symtab_file_stage(char const *name, file_t *parent, char const *text, bool r
 	uri = file_resolve(name, name_len, (resolve_relative ? parent : NULL));
 
 	if(uri == NULL)
-		return dtsls_parser_error("resolving file failed");
+		return devtree_parser_error("resolving file \"%s\" failed", name);
 
 	file = symtab_file_lookup(uri);
 
 	// do not stage files that haven't been modified
-	if(file != NULL && (text == NULL || (file->text_len == text_len && strncmp(file->text, text, text_len) == 0)))
+	if(file != NULL && (text == NULL || (strcmp(file->text, text) == 0)))
 		return (parent != NULL) ? list_add(&parent->header, file) : 0;
 
-	file = file_realloc(file, uri, strlen(uri), text, text_len, parent);
+	file = file_realloc(file, uri, text, parent);
 
 	if(file == NULL)
 		return ERROR("staging file \"%s\"", uri);
@@ -110,48 +119,99 @@ file_t *symtab_file_lookup(char const *uri){
 	return NULL;
 }
 
-list_t const *symtab_symbols(){
-	return symbols;
-}
-
-int symtab_symbol_add(file_t *file, size_t line, size_t column, char const *name, char const *signature){
-	symbol_t *sym;
+// TODO compare speed for list-symbol between new and old dtsls
+int symtab_type_add(char const *name, vector_t *attrs, file_t *file, size_t line, size_t column){
+	type_t *type;
 
 
-	sym = malloc(sizeof(symbol_t));
+	type = malloc(sizeof(type_t));
 
-	if(sym == 0x0)
+	if(type == NULL)
 		goto err_0;
 
-	sym->name = stralloc(name, strlen(name));
-	sym->signature = stralloc(signature, strlen(signature));
+	type->name = stralloc(name);
+	type->attrs = *attrs;
+	type->file = file;
+	type->line = line;
+	type->column = column;
+	type->signature = fmt_signature(attrs, true);
+	type->signature_defaults = fmt_signature(attrs, false);
 
-	if(sym->name == NULL || sym->signature == NULL)
+	if(type->name == NULL || type->signature == NULL || type->signature_defaults == NULL)
 		goto err_1;
 
-	if(list_add(&file->symbols, sym) != 0)
+	if(list_add(&types, type) != 0 || list_add(&file->types, type) != 0)
 		goto err_1;
-
-	if(list_add(&symbols, sym) != 0)
-		goto err_1;
-
-	sym->file = file;
-	sym->line = line;
-	sym->column = column;
 
 	return 0;
 
 
 err_1:
-	sym_free(sym);
+	type_free(type);
 
 err_0:
-	return dtsls_parser_error("symbol allocation failed");
+	return devtree_parser_error("type allocation failed");
+}
+
+int symtab_type_attr_add(vector_t *attrs, char const *name, char const *type, char const *value){
+	type_attr_t attr;
+
+
+	attr.name = stralloc(name);
+	attr.type = stralloc(type);
+	attr.value = stralloc(value);
+
+	if(attr.name == NULL || attr.type == NULL || attr.value == NULL)
+		goto err;
+
+	if(vector_add(attrs, &attr) != 0)
+		goto err;
+
+	return 0;
+
+
+err:
+	type_attr_free(&attr);
+
+	return devtree_parser_error("attribute allocation failed");
+}
+
+int symtab_node_add(char const *name, char const *type, file_t *file, size_t line, size_t column){
+	node_t *node;
+
+
+	node = malloc(sizeof(node_t));
+
+	if(node == NULL)
+		goto err_0;
+
+	node->name = stralloc(name);
+	node->type = stralloc(type);
+	node->file = file;
+	node->column = column;
+	node->line = line;
+
+	if(node->name == NULL || node->type == NULL)
+		goto err_1;
+
+	if(list_add(&nodes, node) != 0 || list_add(&file->nodes, node) != 0)
+		goto err_1;
+
+	VERBOSE("node: name=%s, type=%s, line=%zu, column=%zu", node->name, node->type, node->line, node->column);
+
+	return 0;
+
+
+err_1:
+	node_free(node);
+
+err_0:
+	return devtree_parser_error("node allocation failed");
 }
 
 
 /* local functions */
-static file_t *file_realloc(file_t *file, char const *uri, size_t uri_len, char const *text, size_t text_len, file_t *parent){
+static file_t *file_realloc(file_t *file, char const *uri, char const *text, file_t *parent){
 	if(file == NULL)
 		file = calloc(1, sizeof(file_t));
 
@@ -162,7 +222,7 @@ static file_t *file_realloc(file_t *file, char const *uri, size_t uri_len, char 
 
 	// only allocate uri when not reusing the file object
 	if(file->uri == NULL)
-		file->uri = stralloc(uri, uri_len);
+		file->uri = stralloc(uri);
 
 	if(file->uri == NULL)
 		goto err_1;
@@ -170,11 +230,10 @@ static file_t *file_realloc(file_t *file, char const *uri, size_t uri_len, char 
 	file->path = file->uri + 7;
 
 	if(text != NULL){
-		file->text = stralloc(text, text_len);
-		file->text_len = text_len;
+		file->text = stralloc(text);
 	}
 	else
-		file->text = file_read(file->path, &file->text_len);
+		file->text = file_read(file->path);
 
 	if(file->text == NULL)
 		goto err_1;
@@ -198,16 +257,22 @@ err_0:
 }
 
 static void file_reset(file_t *file){
-	symbol_t *sym;
+	type_t *type;
+	node_t *node;
 
 
-	list_rm(&files, list_find(files, file));
+	list_rm(&files, file);
 
-	list_for_each(file->symbols, sym)
-		sym_free(sym);
+	list_for_each(file->types, type)
+		type_free(type);
+
+	list_for_each(file->nodes, node)
+		node_free(node);
 
 	list_free(&file->header);
-	list_free(&file->symbols);
+	list_free(&file->types);
+	list_free(&file->nodes);
+
 	free((void*)file->text);
 }
 
@@ -271,10 +336,75 @@ static char const *file_resolve(char const *name, size_t name_len, file_t *paren
 	return real;
 }
 
-static void sym_free(symbol_t *sym){
-	list_rm(&symbols, list_find(symbols, sym));
+static void type_free(type_t *type){
+	type_attr_t *attr;
 
-	free((void*)sym->name);
-	free((void*)sym->signature);
-	free(sym);
+
+	list_rm(&type->file->types, type);
+	list_rm(&types, type);
+
+	vector_for_each(&type->attrs, attr)
+		type_attr_free(attr);
+
+	vector_destroy(&type->attrs);
+	free((void*)type->signature);
+	free((void*)type->signature_defaults);
+	free((void*)type->name);
+	free(type);
+}
+
+static void type_attr_free(type_attr_t *attr){
+	free((void*)attr->name);
+	free((void*)attr->type);
+	free((void*)attr->value);
+}
+
+static void node_free(node_t *node){
+	list_rm(&node->file->nodes, node);
+	list_rm(&nodes, node);
+
+	free((void*)node->name);
+	free((void*)node->type);
+	free(node);
+}
+
+static char const *fmt_signature(vector_t *attrs, bool exclude_defaults){
+	size_t len = 2;
+	size_t n = 0;
+	char *sig;
+	type_attr_t *attr;
+
+
+	vector_for_each(attrs, attr){
+		if(attr->value[0] == 0 || !exclude_defaults){
+			len += strlen(attr->name) + strlen(attr->type) + 2 + strlen(attr->value) + 2;
+			n++;
+		}
+	}
+
+	sig = malloc(len + 1);
+
+	if(sig == NULL)
+		return NULL;
+
+	len = 1;
+	sig[0] = '(';
+
+	for(size_t i=0; i<n; i++){
+		attr = vector_get(attrs, i);
+
+		if(attr->value[0] == 0 || !exclude_defaults){
+			len += sprintf(sig + len, "%s=%s%s%s%s"
+				, attr->name
+				, attr->type
+				, ((attr->value[0] == 0) ? "" : ":")
+				, attr->value
+				, (i + 1 >= n) ? "" : ", "
+			);
+		}
+	}
+
+	strcpy(sig + len, ")");
+
+	return sig;
 }

@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <utils/list.h>
+#include <utils/vector.h>
 
 
 /* types */
@@ -20,32 +21,53 @@ typedef struct file_t{
 	char const *uri,
 			   *path,
 			   *text;
-	size_t text_len;
 
 	list_t *header,
-		   *symbols;
+		   *types,
+		   *nodes;
 } file_t;
 
 typedef struct{
 	char const *name,
-			   *signature;
+			   *type,
+			   *value;
+} type_attr_t;
+
+typedef struct{
+	char const *name,
+			   *signature,
+			   *signature_defaults;
+	vector_t attrs;
 
 	file_t *file;
 	size_t line,
 		   column;
-} symbol_t;
+} type_t;
+
+typedef struct{
+	char const *name,
+			   *type;
+
+	file_t *file;
+	size_t line,
+		   column;
+} node_t;
+
 
 
 /* prototypes */
 int symtab_update(char const *file_name, char const *text);
 void symtab_free();
 
-list_t const *symtab_files();
+list_t *symtab_types(void);
+list_t *symtab_nodes(void);
+
 int symtab_file_stage(char const *name, file_t *parent, char const *text, bool resolve_relative);
 file_t *symtab_file_lookup(char const *uri);
 
-list_t const *symtab_symbols();
-int symtab_symbol_add(file_t *file, size_t line, size_t column, char const *name, char const *signature);
+int symtab_type_add(char const *name, vector_t *attrs, file_t *file, size_t line, size_t column);
+int symtab_type_attr_add(vector_t *attrs, char const *name, char const *type, char const *value);
+int symtab_node_add(char const *name, char const *type, file_t *file, size_t line, size_t column);
 
 
 #endif // DTSLS_SYMTAB_H
